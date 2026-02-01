@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+
+/* ===== SIDEBAR ===== */
+#sidebar{background:#f3f2f7; border-right:1px solid lightgray; min-height:100vh; width:200px; position:fixed; top:0; left:-200px; 
+padding: 0.5rem 1rem; transition:.3s; z-index:1100; box-shadow: rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px;}
+#sidebar.active{left:0;}
+#sidebar button{width:100%;margin-bottom:.5rem;}
+#overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000;}
+#overlay.active{display:block;}
+#mainContent{transition:.3s; min-height:100vh; background:#f2f4f7; color:#111;}
+#mainContent.shift{margin-left:200px;}
+/* ===== TOP BAR ===== */
+.top-bar{position:sticky; top:0; z-index:900; height:50px; border-bottom:1px solid #ddd; background-color:#f8f9fa;}
+#hamburger{font-size:1.6rem;cursor:pointer;}
+/* ===== CENTER FIX ===== */
+.attendance-wrap{ max-width:600px;}
+/* ===== ATTENDANCE TABLE ===== */
+.attendance-table th, .attendance-table td{vertical-align:middle; text-align:center;}
+.attendance-table {border-collapse: separate; border-spacing: 0 4px;}
+/* ===== MOBILE DESIGN ===== */
+@media(max-width:767px){
+  .attendance-table .th_name{width: 60%;}
+  .attendance-table .td_name{display: flex; gap: 10px; align-items: center;}
+  .attendance-table .name_roll{display: flex; flex-direction: column; align-items: start;}
+}
+
+/* ===== BUTTON ===== */
+.attn-btn{width:44px; height:44px; border:none; border-radius:6px; font-weight:bold; color:#fff;}
+.attn-btn.p{background:#4caf50;}
+.attn-btn.a{background:#f44336;}
+
+/* Absent row highlight */
+.table .tr-absent{ --bs-table-bg: rgba(255, 100, 100, 0.3);} 
+.monthly-table th, .monthly-table td { text-align: center; font-size: 12px; padding: 4px;}
+.day-P { background:#c8f7c5; font-weight:bold; }
+.day-A { background:#f7c5c5; font-weight:bold; }
+.day-empty { background:#f1f1f1; }
+.weekend { background:#e0e0e0 !important; }
+.sticky-col {position: sticky; left: 0; background: white; z-index: 2;}
+</style>
+</head>
+<body>
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <span id="sidebarClose" class="mb-2" onclick="toggleSidebar()" style="cursor:pointer; font-size:1.5rem; float:right;">X</span>
+  <!-- Mobile Logout Button -->
+  <button class="btn btn-outline-primary btn-sm py-2" onclick="showMonthlyAttendance()">Monthly Attendance</button>
+  <button class="btn btn-outline-primary btn-sm py-2" onclick="showStuReport()">Student Progress</button>  
+  <button class="btn btn-sm btn-outline-danger py-2 w-100 d-md-none" onclick="logoutTeacher()">Logout</button>
+</div>
+
+<div id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- MAIN -->
+<div id="mainContent">
+<div class="container-fluid bg-primary text-white text-center py-2 fs-5">
+  <div class="fw-bold">Pirganj Govt. Technical School & College, Thakurgaon</div>
+</div>
+
+<div class="top-bar d-flex align-items-center px-2 py-md-2">
+  <span id="hamburger" onclick="toggleSidebar()">☰</span>
+  <span id="teacherName" class="fw-bold ms-3"></span>
+  <button class="btn btn-sm btn-outline-danger ms-auto d-none d-md-inline" onclick="logoutTeacher()">Logout</button>
+</div>
+
+<!-- SEARCH -->
+<div class="container mb-3 attendance-wrap p-0" style="background-color:#ffffff;">
+  <div class="border rounded p-3 shadow-sm">
+    <div class="row g-2">
+      <div class="col-6 fw-bold">Class</div>
+      <div class="col-6"><select id="select_cls" class="form-select">
+          <option value=""> Select...</option>
+          <option value="6">Class 6</option>
+          <option value="7">Class 7</option>
+          <option value="8">Class 8</option>
+          <option value="9">Class 9</option>
+          <option value="10">Class 10</option>
+          <option value="11">Class 11</option>
+          <option value="12">Class 12</option>
+        </select></div>
+      <div class="col-6 fw-bold">Section</div>
+      <div class="col-6"><select id="select_sec" class="form-select">
+          <option value=""> Select...</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="A">Apparel</option>
+          <option value="C">Civil</option>
+          <option value="E">Electronics</option>
+          <option value="W">Welding</option>        
+        </select></div>
+      <div class="col-6 fw-bold">Subject</div>
+      <div class="col-6"><select id="select_sub" class="form-select">
+           <option value=""> Select...</option>
+          <option value="B">বাংলা</option>
+          <option value="E">ইংরেজী</option>
+          <option value="M">গণিত</option>
+          <option value="BD">বাংলাদেশ ও বিশ্বপরিচয়</option>
+          <option value="S">বিজ্ঞান</option>
+          <option value="P">পদার্থ বিজ্ঞান</option>
+          <option value="C">রসায়ন বিজ্ঞান</option>       
+          <option value="I">আইসিটি</option>
+          <option value="W">কর্মমুখী শিক্ষা</option>
+          <option value="T">ট্রেড</option>
+          <option value="R">ধর্ম</option>       
+        </select></div>
+      <div class="col-6 fw-bold">Date</div>
+      <div class="col-6"><input type="date" id="todayDate" class="form-control"></div>
+    </div>
+    <div class="text-center mt-3">
+      <button class="btn btn-primary" onclick="fetchStudents()">Load Students</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<div id="atnInfoContainer" class="container border-bottom py-2" style="display:none; background-color: #ffffff;">
+  <div class="row text-center fw-bold">
+    <div class="col-4 col-md-2 py-1" style="cursor:pointer" onclick="showAllStudents()">Total: <span id="totalStu">0</span></div>
+    <div class="col-4 col-md-2 text-success py-1">Present: <span id="presentStu">0</span></div>
+    <div class="col-4 col-md-2 text-danger py-1" style="cursor:pointer" onclick="showAbsentOnly()">Absent: <span id="absentStu">0</span></div>
+     <div class="col-6 col-md-3 py-1">
+      <input type="checkbox" id="markAllPresent"> <label for="markAllPresent">All Present</label>
+    </div>
+    <div class="col-6 col-md-3 py-1" >Attendance: <span id="atnPercentage">100 %</span></div>
+  </div>
+</div>
+
+<div id="tableContainer" class="container p-0" style="display:none">
+ <div class="row">
+  <div class="col-12">
+    <table class="table attendance-table">
+      <thead>
+        <tr>
+          <th class="d-none d-md-table-cell">SL</th>
+          <th class="d-none d-md-table-cell">Roll</th>
+          <th class="th_name">Name</th>
+          <th>Last Day</th>
+          <th class="d-none d-md-table-cell">Today</th>
+          <th>Action</th>
+          <th class="d-none d-md-table-cell">Rate</th>
+        </tr>
+      </thead>
+      <tbody id="mytbody"></tbody>
+    </table>
+  </div>
+ </div>
+ <div class="w-100 d-flex justify-content-center"><button class="btn btn-warning mt-3" onclick="submitAttendance()">Submit Attendance</button></div>
+</div>
+
+<div id="monthlyContainer" class="container my-4 border pt-3" style="display:none; background-color: #ffffff;">
+  <div class="d-flex justify-content-center align-items-center my-2 gap-3">
+      <button id="prevBtn" class="btn btn-outline-primary btn-sm" onclick="changeMonth(-1)"> ◀ Previous </button>
+      <h4 id="monthTitle" class="m-0"></h4>
+      <button id="nextBtn" class="btn btn-outline-primary btn-sm" onclick="changeMonth(1)">Next ▶</button>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="table table-bordered monthly-table">
+      <thead id="monthlyHead"></thead>
+      <tbody id="monthlyBody"></tbody>
+    </table>
+  </div>
+  <div class="text-center my-3">
+    <button class="btn btn-danger" onclick="downloadMonthlyExcel()">Download Excell</button>
+    <button class="btn btn-secondary ms-2" onclick="backToDaily()">Back</button>
+  </div>
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+
+<script>
+  /* ========== CONFIG ========== */
+const API_URL = "https://script.google.com/macros/s/AKfycbyQieJ5EDXNOySkbrbrYUUxR-Ua9Owhz-G7n4JH1PP5hIPCqzN7IAjQ2VI7pCa0DcF6Mg/exec";
+
+// ---------------- Session Check ----------------
+const teacherID = sessionStorage.getItem("teacher"); 
+const teacherName = sessionStorage.getItem("teacherName");
+if(!teacherID){location.href="index.html"; }
+
+document.getElementById("teacherName").innerText = "Logged in: " + teacherName;
+document.getElementById("todayDate").value = new Date().toISOString().slice(0,10);
+
+const sub = document.getElementById('select_sub');
+const sec = document.getElementById('select_sec');
+const cls = document.getElementById('select_cls');
+let currentMonth;
+let currentYear;
+const sidebar=document.getElementById("sidebar");
+const overlay=document.getElementById("overlay");
+const mainContent = document.getElementById("mainContent");
+const hamburger = document.getElementById("hamburger");
+const sidebarClose = document.getElementById("sidebarClose");
+
+function toggleSidebar() {
+  const isActive = sidebar.classList.toggle("active");
+  if (window.innerWidth >= 768) { mainContent.classList.toggle("shift", isActive);}
+  if (window.innerWidth < 768) {overlay.classList.toggle("active", isActive);}
+  if(isActive) {
+    hamburger.style.display = "none"; // hide topbar icon
+    sidebarClose.style.display = "inline"; // show sidebar icon
+  } else {
+    hamburger.style.display = "inline"; // show topbar icon
+    sidebarClose.style.display = "none"; // hide sidebar icon
+  }
+}
+
+document.getElementById("todayDate").value=new Date().toISOString().slice(0,10);
+let studentsData=[];
+let allStudentsData = [];
+
+function fetchStudents(){
+  if(!cls.value || !sec.value || !sub.value){Swal.fire("Select Class, Section & Subject"); return;}
+    showLoader("Loading..."); 
+    document.getElementById("atnInfoContainer").style.display = "block"; 
+    document.getElementById("tableContainer").style.display = "block"; 
+    document.getElementById("mytbody").innerHTML = "";
+
+    const inputDate = document.getElementById('todayDate').value;
+    const dateObj = new Date(inputDate);
+    const day = dateObj.getDate();     
+    const month = dateObj.getMonth() + 1;
+    
+    fetch(API_URL,{
+      method:"POST",
+      body:JSON.stringify({action:"getStudents", cls:cls.value, sec:sec.value, sub:sub.value, tid:teacherID, day:day, month: month})})
+    .then(r=>r.json())
+    .then(res=>{ Swal.close(); studentsList(res);});
+}
+
+/* ========== RENDER TABLE ========== */
+function studentsList(res){
+  console.log(res);
+  if(res.status === "unauthorized"){ hideLoader(); Swal.fire("Sorry, you are not authorized for this subject!"); return;}
+  if(res.status === "ok"  && res.data.length > 0){
+    studentsData = res.data; allStudentsData = [...res.data]; hideLoader(); 
+    renderTable();
+  }
+}  
+
+function renderTable(){
+  document.getElementById("mytbody").innerHTML = "";
+  let tblRows = ""; 
+  let present=0;
+  studentsData.forEach((s,i)=>{
+    if(s.status==="P") present++;
+    tblRows +=`
+      <tr class="${s.status !== 'P' ? 'tr-absent' : ''}">
+        <td class="d-none d-md-table-cell">${i+1}</td>
+        <td class="d-none d-md-table-cell">${s.roll}</td>
+        <td><div class="td_name">
+            <div>👤</div>
+            <div class="name_roll"> <div>${s.name}</div> <div class="d-md-none">Roll: ${s.roll}</div></div></div> 
+        </td>
+        <td><span class="badge ${s.lastDay==="P"?"bg-success":"bg-danger"}">${s.lastDay==="P"?"P":"A"}</span></td>
+        <td class="d-none d-md-table-cell">
+            <span class="badge ${s.status==="P"?"bg-success":"bg-danger"}"> ${s.status==="P"?"Present":"Absent"}</span>
+        </td>
+        <td class="action"><button class="attn-btn ${s.status==="P"?"p":"a"}" onclick="toggleAttendance(${i})"> ${s.status==="P"?"P":"A"}</button></td>
+        <td class="d-none d-md-table-cell">${s.rate} %</td>
+      </tr>`;
+  });
+
+  document.getElementById("mytbody").innerHTML = tblRows;
+  document.getElementById('totalStu').textContent = studentsData.length;
+  document.getElementById('presentStu').textContent = present;
+  document.getElementById('absentStu').textContent = studentsData.length - present;
+  updateMarkAllCheckbox();
+}
+
+function toggleAttendance(i){studentsData[i].status=studentsData[i].status==="P"?"":"P"; renderTable();}
+
+function showAbsentOnly(){
+  const absentCount = studentsData.filter(s => s.status !== "P").length;
+  if(absentCount === 0) return;
+  studentsData = allStudentsData.filter(s => s.status !== "P");
+  renderTable();
+}
+
+function showAllStudents(){ studentsData = [...allStudentsData]; renderTable();}
+
+function showMonthlyAttendance(){
+  document.getElementById("atnInfoContainer").style.display = "none"; 
+  document.getElementById("tableContainer").style.display = "none"; 
+  document.getElementById("monthlyContainer").style.display = "block";
+  const inputDate = document.getElementById('todayDate').value;
+  const dateObj = new Date(inputDate);
+  currentMonth = dateObj.getMonth() + 1;
+  currentYear  = dateObj.getFullYear();
+  loadMonthlyAttendance();
+}
+
+
+function loadMonthlyAttendance(){
+  showLoader();
+  fetch(API_URL,{
+    method:"POST",
+    body:JSON.stringify({action:"monthlyAttendance", cls:cls.value, sec:sec.value, sub:sub.value, month:currentMonth, year:currentYear})})
+  .then(r=>r.json())
+  .then(res=> {
+  if(res.status === "ok" && res.data.length > 0){
+          renderMonthlyTable(res.data);
+      } else {
+          hideLoader();
+          Swal.fire("No attendance data found for this month");
+          document.getElementById("monthlyHead").innerHTML = "";
+          document.getElementById("monthlyBody").innerHTML = "";
+      }
+  });
+}
+
+function renderMonthlyTable(data){
+  hideLoader();
+  const head = document.getElementById("monthlyHead");
+  const body = document.getElementById("monthlyBody");
+  head.innerHTML = body.innerHTML = "";
+  const days = data[0].days.length;
+  const monthName = new Date(currentYear, currentMonth - 1, 1).toLocaleString('default',{month:'long'});
+  document.getElementById("monthTitle").innerText =`${monthName} ${currentYear}`;
+
+  // HEADER
+  let h = `<tr>
+    <th class="sticky-col">Roll</th>
+    <th class="sticky-col">Name</th>`;
+  for(let d=1; d<=days; d++){
+    const wd = new Date(currentYear, currentMonth - 1, d).getDay();
+    h += `<th class="${wd==0||wd==6?'weekend':''}">${d}</th>`;
+  }
+  h += `<th>P</th><th>A</th></tr>`;
+  head.innerHTML = h;
+
+  // BODY
+  data.forEach(stu=>{
+    let r = `<tr>
+      <td class="sticky-col">${stu.roll}</td>
+      <td class="sticky-col">${stu.name}</td>`;
+    stu.days.forEach((d,i)=>{
+      const wd = new Date(currentYear, currentMonth - 1, i+1).getDay();
+      let cls = d==="P"?"day-P":(d===""?"day-empty":"day-A");
+      if(wd==0||wd==6) cls += " weekend";
+      r += `<td class="${cls}">${d}</td>`;
+    });
+    r += `<td>${stu.present}</td><td>${stu.absent}</td></tr>`;
+    body.innerHTML += r;
+  });
+}
+
+function backToDaily(){ 
+  document.getElementById("monthlyContainer").style.display="none";
+  document.getElementById("attendanceInfo").style.display="block";
+  document.getElementById("attn_Table_Container").style.display="block";
+}
+
+function downloadMonthlyExcel(){
+
+  if(!cls.value || !sec.value || !sub.value){
+    Swal.fire("Class, Section & Subject required");
+    return;
+  }
+
+  showLoader("Preparing Excel...");
+
+  fetch(API_URL,{
+    method:"POST",
+    body:JSON.stringify({
+      action: "monthlyAttendance",
+      cls: cls.value,
+      sec: sec.value,
+      sub: sub.value,
+      month: currentMonth,
+      year: currentYear
+    })
+  })
+  .then(r => r.json())
+  .then(res => { console.log(res);
+    hideLoader();
+
+    if(res.status !== "ok" || !res.data.length){
+      Swal.fire("No data found");
+      return;
+    }
+
+    generateExcel(res.data);
+  })
+  .catch(err=>{
+    hideLoader();
+    Swal.fire("Failed to fetch data");
+    console.error(err);
+  });
+}
+
+function generateExcel(data){
+
+  const wb = XLSX.utils.book_new();
+  const ws = {};
+  let row = 0;
+
+  const days = data[0].days.length;
+  const monthName = new Date(currentYear, currentMonth-1, 1)
+    .toLocaleString("default",{month:"long"});
+
+  const header = ["Roll","Name"];
+  for(let d=1; d<=days; d++) header.push(d);
+  header.push("Total P","% P");
+
+  const totalCols = header.length;
+
+  /* ========= helpers ========= */
+  const C = (r,c)=>XLSX.utils.encode_cell({r,c});
+  const range = (r1,c1,r2,c2)=>({s:{r:r1,c:c1},e:{r:r2,c:c2}});
+
+  /* ========= Institute ========= */
+  ws[C(row,0)] = {
+    v:"Pirganj Govt. Technical School and College, Pirganj, Thakurgaon",
+    s:{font:{sz:12},alignment:{horizontal:"center"}}
+  };
+  ws["!merges"] = [ range(row,0,row,totalCols-1) ];
+  row++;
+
+  /* ========= Title ========= */
+  ws[C(row,0)] = {
+    v:"Monthly Attendance",
+    s:{font:{sz:12},alignment:{horizontal:"center"}}
+  };
+  ws["!merges"].push(range(row,0,row,totalCols-1));
+  row++;
+
+  /* ========= Month ========= */
+  ws[C(row,0)] = {
+    v:`${monthName}, ${currentYear}`,
+    s:{font:{bold:true,sz:12},alignment:{horizontal:"center"}}
+  };
+  ws["!merges"].push(range(row,0,row,totalCols-1));
+  row++;
+
+  /* ========= Class Info ========= */
+  ws[C(row,0)] = {v:`Class: ${cls.value}`};
+  ws[C(row,2)] = {v:`Section: ${sec.value}`};
+  ws[C(row,11)] = {v:`Subject: ${sub.value}`};
+  ws[C(row,23)] = {v:`Teacher:`};
+
+  ws["!merges"].push(
+    range(row,0,row,1),
+    range(row,2,row,10),
+    range(row,11,row,22),
+    range(row,23,row,totalCols-1)
+  );
+  row++;
+
+  /* ========= Table Header ========= */
+  header.forEach((h,c)=>{
+    ws[C(row,c)] = {
+      v:h,
+      s:{
+        font:{bold:true},
+        alignment:{horizontal:"center"},
+        border:{
+          top:{style:"thin"},
+          bottom:{style:"thin"},
+          left:{style:"thin"},
+          right:{style:"thin"}
+        }
+      }
+    };
+
+    // weekend header shade
+    if(c>=2 && c<2+days){
+      const d = c-1;
+      const wd = new Date(currentYear,currentMonth-1,d).getDay();
+      if(wd===5 || wd===6){
+        ws[C(row,c)].s.fill = {fgColor:{rgb:"CCCCCC"}};
+      }
+    }
+  });
+  row++;
+
+  /* ========= Table Body ========= */
+  data.forEach(stu=>{
+    const total = stu.present + stu.absent;
+    const pct = total ? Math.round((stu.present/total)*100) : 0;
+
+    const r = [stu.roll,stu.name,...stu.days,stu.present,pct];
+
+    r.forEach((val,c)=>{
+      ws[C(row,c)] = {
+        v:val,
+        s:{
+          alignment:{horizontal:"center"},
+          border:{
+            top:{style:"thin"},
+            bottom:{style:"thin"},
+            left:{style:"thin"},
+            right:{style:"thin"}
+          }
+        }
+      };
+
+      // weekend body shade
+      if(c>=2 && c<2+days){
+        const d = c-1;
+        const wd = new Date(currentYear,currentMonth-1,d).getDay();
+        if(wd===5 || wd===6){
+          ws[C(row,c)].s.fill = {fgColor:{rgb:"E0E0E0"}};
+        }
+      }
+    });
+    row++;
+  });
+
+  /* ========= Signature ========= */
+  row+=2;
+  ws[C(row,0)]={v:"Class Teacher"};
+  ws["!merges"].push(range(row,0,row,9));
+  row++;
+  ws[C(row,0)]={v:"Signature: __________________"};
+  ws["!merges"].push(range(row,0,row,9));
+
+  /* ========= Column Width ========= */
+  ws["!cols"] = [
+    {wpx:60},{wpx:150},
+    ...Array(days).fill({wpx:25}),
+    {wpx:50},{wpx:50}
+  ];
+
+  ws["!ref"] = XLSX.utils.encode_range({
+    s:{r:0,c:0},
+    e:{r:row,c:totalCols-1}
+  });
+
+  XLSX.utils.book_append_sheet(wb,ws,"Monthly Attendance");
+
+  XLSX.writeFile(
+    wb,
+    `Monthly_Attendance_Class_${cls.value}${sec.value}_${sub.value}_${monthName}_${currentYear}.xlsx`
+  );
+}
+
+
+
+
+
+function changeMonth(step){ currentMonth += step;
+  if(currentMonth < 1){ currentMonth = 12; currentYear--;}
+  if(currentMonth > 12){ currentMonth = 1; currentYear++;}
+  loadMonthlyAttendance();
+}
+
+function submitAttendance(){
+  Swal.fire({title: 'Are you sure?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Yes', cancelButtonText: 'No'
+  }).then((result) => { 
+    if (result.isConfirmed) {const inputDate = document.getElementById('todayDate').value;
+      if(!inputDate){ alert("Please select date"); return;}
+
+      const dateObj = new Date(inputDate);
+      const day = dateObj.getDate();     
+      const month = dateObj.getMonth() + 1;
+
+      let attendanceArray = studentsData.map(s => s.status === "P" ? "P" : "");
+      let rollArray = studentsData.map(s => s.roll);
+
+      const dataToSend = {cls: cls.value, sec: sec.value, sub: sub.value, day: day, month: month, rolls: rollArray, attendance: attendanceArray};
+      showLoader();
+
+      fetch(API_URL,{
+        method:"POST",
+        body:JSON.stringify({action:"saveAttendance", cls: cls.value, sec: sec.value, sub: sub.value, day: day, month: month, rolls: rollArray, attendance: attendanceArray})})
+      .then(r=>r.json())
+      .then(res=>{
+        if(res.status === "ok"){
+            hideLoader(); Swal.fire({position: "top", icon: "success", title: "ডাটা সফলভাবে সেভ হয়েছে", showConfirmButton: false,timer: 1500});
+        }   
+      });
+    }
+  })
+}
+
+document.getElementById("markAllPresent").addEventListener("change", function () {
+  const isChecked = this.checked;
+  studentsData.forEach(s => { s.status = isChecked ? "P" : "";});
+  allStudentsData.forEach(s => { s.status = isChecked ? "P" : "";});
+  renderTable();
+});
+
+function updateMarkAllCheckbox() {
+  const chk = document.getElementById("markAllPresent");
+  if (!studentsData.length) {chk.checked = false; return;}
+  const allPresent = studentsData.every(s => s.status === "P");
+  chk.checked = allPresent;
+}
+
+function showLoader(text = "Processing...") {
+  Swal.fire({ title: text, allowOutsideClick: false, didOpen: () => {Swal.showLoading();}});
+}
+function hideLoader() {Swal.close();}
+
+function showStuReport(){
+  if(!cls.value || !sec.value || !sub.value){
+    Swal.fire({position: "top", icon: "error", title: "Class, Section & Subject not Selected!", showConfirmButton: false,timer: 2000});
+    return;
+  }
+  sessionStorage.setItem("cls", cls.value);
+  sessionStorage.setItem("sec", sec.value);
+  sessionStorage.setItem("sub", sub.value);
+  if(sessionStorage.getItem("sub")){location.href = "report.html";}
+  }
+</script>
+</body>
+</html>

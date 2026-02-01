@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Profile Viewer</title>
+
+<!-- Bootstrap 5 -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+
+/* ===== SIDEBAR ===== */
+#sidebar{background:#f3f2f7; border-right:1px solid lightgray; min-height:100vh; width:200px; position:fixed; top:0; left:-200px; 
+padding: 0.5rem 1rem; transition:.3s; z-index:1100; box-shadow: rgba(0, 0, 0, 0.15) 1.95px 1.95px 2.6px;}
+#sidebar.active{left:0;}
+#sidebar button{width:100%;margin-bottom:.5rem;}
+#overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000;}
+#overlay.active{display:block;}
+/* ===== MAIN CONTENT ===== */
+#mainContent{transition:.3s; min-height:100vh; background:#f2f4f7; color:#111;}
+#mainContent.shift{margin-left:200px;}
+
+/* ===== TOP BAR ===== */
+.top-bar{position:sticky; top:0; z-index:900; height:50px; border-bottom:1px solid #ddd; background-color:#f8f9fa; display:flex; align-items:center; padding:0 1rem;}
+#hamburger{font-size:1.6rem; cursor:pointer;}
+#teacherName{margin-left:1rem; font-weight:bold;}
+#logoutBtn{margin-left:auto;}
+
+/* ===== STUDENT CARD ===== */
+.glass-card{background:#ffffff; border-radius:10px; border:1px solid #e3e6ea; color:#000; box-shadow:0 8px 25px rgba(0,0,0,.08); transition:.25s ease; padding:1rem;}
+.glass-card:hover{transform:translateY(-3px);}
+.avatar{width:72px; height:72px; border-radius:50%; border:2px solid #d0d0d0;}
+.badge-custom{background:#f7f7f7; border:1px solid #dcdcdc;font-size:11px; padding:6px 4px; border-radius:6px; color:#000;}
+.progress{height:8px; background:#e6e6e6; border-radius:20px; overflow:hidden;}
+.progress-bar{transition:width .8s ease-in-out;}
+.good{background:#2e7d32;} .average{background:#f9a825;} .poor{background:#c62828;}
+.summary{font-size:13px; border-top:1px dashed #ddd; padding-top:6px; margin-top:6px;}
+small{color:#555;}
+@media(max-width:576px){.glass-card{padding:14px!important;} h4{font-size:16px;} .summary{font-size:12px;}}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <span id="sidebarClose" class="mb-2" onclick="toggleSidebar()" style="cursor:pointer; font-size:1.5rem; float:right;">X</span>
+  <button class="btn btn-outline-primary w-100 mb-2" onclick="goAttendancePage()">Attendance Page</button>
+  <button class="btn btn-outline-primary w-100 mb-2" onclick="goAttendancePage()">About</button>
+  <!-- Mobile Logout Button -->
+  <button id="mobileLogoutBtn" class="btn btn-sm btn-outline-danger w-100 d-md-none mt-2" onclick="logoutTeacher()">Logout</button>
+</div>
+<div id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- MAIN -->
+<div id="mainContent">
+  <div class="container-fluid bg-primary text-white text-center py-2 fs-5">
+    <div class="fw-bold">Pirganj Govt. Technical School & College, Thakurgaon</div>
+  </div>
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <span id="hamburger" onclick="toggleSidebar()">☰</span>
+    <span id="teacherName">Logged in: Teacher Name</span>
+    <!-- Desktop Logout Button -->
+    <button id="logoutBtn" class="btn btn-sm btn-outline-danger d-none d-md-inline" onclick="logoutTeacher()">Logout</button>
+  </div>
+
+  <!-- CARD -->
+  <div class="container mt-4 d-flex justify-content-center">
+    <div class="col-12 col-sm-10 col-md-6 col-lg-4">
+      <div class="glass-card text-center">
+        <img id="photo" class="avatar mb-2">
+        <h4 id="name">Student Name</h4>
+        <small>Roll: <span id="roll"></span></small>
+
+        <div class="mb-2">
+          <small>Class Tests</small>
+          <div class="d-flex gap-1">
+            <div class="badge badge-custom flex-fill" id="ct1"></div>
+            <div class="badge badge-custom flex-fill" id="ct2"></div>
+            <div class="badge badge-custom flex-fill" id="ct3"></div>
+          </div>
+        </div>
+
+        <div class="mb-2">
+          <small>Quiz Tests</small>
+          <div class="d-flex gap-1">
+            <div class="badge badge-custom flex-fill" id="q1"></div>
+            <div class="badge badge-custom flex-fill" id="q2"></div>
+            <div class="badge badge-custom flex-fill" id="q3"></div>
+          </div>
+        </div>
+
+        <div class="mb-2">
+          <small>Attendance</small>
+          <div class="progress">
+            <div id="progressBar" class="progress-bar"></div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between summary mb-2">
+          <div>Total: <span id="total"></span></div>
+          <div>Avg: <span id="avg"></span></div>
+          <div>Grade: <b id="grade"></b></div>
+        </div>
+
+        <div class="d-flex justify-content-between">
+          <button class="btn btn-outline-primary btn-sm" onclick="manualPrev()">⬅ Prev</button>
+          <button class="btn btn-outline-primary btn-sm" onclick="manualNext()">Next ➡</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbyQieJ5EDXNOySkbrbrYUUxR-Ua9Owhz-G7n4JH1PP5hIPCqzN7IAjQ2VI7pCa0DcF6Mg/exec";
+const sidebar=document.getElementById("sidebar");
+const overlay=document.getElementById("overlay");
+const hamburger=document.getElementById("hamburger");
+const sidebarClose = document.getElementById("sidebarClose");
+
+function toggleSidebar() {
+  const isActive = sidebar.classList.toggle("active");
+  if (window.innerWidth >= 768) { mainContent.classList.toggle("shift", isActive);}
+  if (window.innerWidth < 768) {overlay.classList.toggle("active", isActive);}
+  if(isActive) {
+    hamburger.style.display = "none"; // hide topbar icon
+    sidebarClose.style.display = "inline"; // show sidebar icon
+  } else {
+    hamburger.style.display = "inline"; // show topbar icon
+    sidebarClose.style.display = "none"; // hide sidebar icon
+  }
+}
+
+let students = [];
+let i = 0;
+
+function loadReportData() {
+  const cls = sessionStorage.getItem("cls");
+  const sec = sessionStorage.getItem("sec");
+  const sub = sessionStorage.getItem("sub");
+  document.getElementById("teacherName").innerText = "Logged in: " + sessionStorage.getItem("teacherName");
+  fetch(API_URL,{
+    method:"POST",
+    body:JSON.stringify({action:"report", cls:cls, sec: sec, sub: sub})})
+  .then(r=>r.json())
+  .then(res=>{if(res.status === "ok"){students = res.data; render();}});
+}
+
+function render() {
+  if (!students.length) return;
+  const s = students[i];
+  document.getElementById("name").innerText = s.name;
+  document.getElementById("roll").innerText = s.roll;
+  document.getElementById("photo").src = "https://drive.google.com/thumbnail?id="+s.imgID+"&sz=w1000";
+
+  s.ct.forEach((v, idx) => document.getElementById("ct"+(idx+1)).innerText = "CT"+(idx+1)+":"+v);
+  s.quiz.forEach((v, idx) => document.getElementById("q"+(idx+1)).innerText = "Q"+(idx+1)+":"+v);
+
+  const total = [...s.ct, ...s.quiz].reduce((a,b)=>a+b,0);
+  const avg = (total/6).toFixed(2);
+
+  document.getElementById("total").innerText = total;
+  document.getElementById("avg").innerText = avg;
+  document.getElementById("grade").innerText = avg>=8?"A":avg>=6?"B":avg>=4?"C":"F";
+
+  const bar = document.getElementById("progressBar");
+  bar.className = "progress-bar";
+  bar.classList.add(
+    s.attendance>=85?"good":
+    s.attendance>=70?"average":"poor"
+  );
+  bar.style.width = s.attendance + "%";
+}
+
+function manualNext(){ i=(i+1)%students.length; render();}
+function manualPrev(){ i=(i-1+students.length)%students.length; render();}
+
+function goAttendancePage() {location.href = "attendance.html";}
+// ---------------- Logout Function ----------------
+function logoutTeacher() {
+  sessionStorage.removeItem("teacher"); sessionStorage.removeItem("teacherName"); sessionStorage.clear(); location.href = "index.html";
+}
+
+// page load
+window.onload = loadReportData;
+</script>
+</body>
+</html>
