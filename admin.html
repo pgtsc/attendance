@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Page</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+body {padding:0; margin:0; font-family: Arial, sans-serif;}
+#sidebar{background:#f3f2f7; border-right:1px solid lightgray; min-height:100vh; width:200px; position:fixed; top:0; left:-200px; padding:0.5rem 1rem; transition:.3s; z-index:1100; box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 1px 3px 1px;}
+#sidebar.active{left:0;}
+#sidebar button{width:100%;margin-bottom:.5rem;}
+#overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000;}
+#overlay.active{display:block;}
+#mainContent{transition:.3s; min-height:100vh; background:#f2f4f7; color:#111;}
+#mainContent.shift{margin-left:200px;}
+.top-bar{position:sticky; top:0; z-index:900; height:50px; border-bottom:1px solid #ddd; background-color:#f8f9fa;}
+#hamburger{font-size:1.6rem;cursor:pointer;}
+.assignment-row { display:flex; gap:8px; margin-bottom:6px; }
+.assignment-row select { flex:1; }
+.btn-info, .btn-warning, .btn-danger {transition: all 0.3s ease;}
+.btn-primary:hover, .btn-warning:hover, .btn-danger:hover {transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0, 0, 0, 0.25);}
+.btn-info:hover { background-color: #307cef;}
+.btn-warning:hover { background-color: #96730b;}
+.btn-danger:hover { background-color: #8f232e;}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <span id="sidebarClose" class="mb-2" onclick="toggleSidebar()" style="cursor:pointer; font-size:1.5rem; float:right;">X</span>
+  <button class="btn btn-outline-primary btn-sm py-2" onclick="goAttendancePage()">Attendance Page</button>
+  <button class="btn btn-sm btn-outline-danger py-2 w-100 d-md-none" onclick="logoutTeacher()">Logout</button>
+</div>
+<div id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- MAIN CONTENT -->
+<div id="mainContent">
+  <div class="container-fluid bg-primary text-white text-center py-2 fs-5">
+    <div class="fw-bold">Pirganj Govt. Technical School & College, Thakurgaon</div>
+  </div>
+  <div class="top-bar d-flex align-items-center px-2 py-md-2">
+    <span id="hamburger" onclick="toggleSidebar()">☰</span>
+    <span id="teacherName" class="fw-bold ms-3">Logged in: Admin</span>
+    <button class="btn btn-sm btn-outline-danger ms-auto d-none d-md-inline" onclick="logoutTeacher()">Logout</button>
+  </div>
+  <div class="container">
+    <h3 class="mb-4 text-center">Admin Dashboard</h3>
+    <ul class="nav nav-tabs">
+      <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#teachersTab">Teachers</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#teacherFormTab">Teacher Form</button></li>
+      <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#holidaysTab">Holidays</button></li>
+    </ul>
+
+    <div class="tab-content mt-3">
+      <!-- Teachers Tab -->
+      <div class="tab-pane fade show active" id="teachersTab">
+        <button class="btn btn-primary mb-3" onclick="openTeacherForm()">+ Add Teacher</button>
+        <table class="table table-bordered table-hover">
+          <thead>
+            <tr>
+              <th>TID</th><th>Name</th><th>Password</th><th>Assignments</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="teachersBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Teacher Form -->
+      <div class="tab-pane fade" id="teacherFormTab">
+        <h5 id="formTitle">Add Teacher</h5>
+        <div class="mb-2">
+        <label>TID</label><input id="fTid" class="form-control" placeholder="e.g T001"></div>
+        <div class="mb-2"><label>Name</label><input id="fName" class="form-control"></div>
+        <div class="mb-2"><label>Password</label><input id="fPwd" class="form-control"></div>
+        <hr>
+        <h6>Subject List</h6>
+        <div id="assignBox"></div>
+        <button class="btn btn-secondary btn-sm my-2" onclick="addAssignmentRow()">+ Add Subjects</button>
+        <br>
+        <button class="btn btn-primary" onclick="saveTeacher()">Save</button>
+      </div>
+
+      <!-- Holidays Tab -->
+      <div class="tab-pane fade" id="holidaysTab">
+        <button class="btn btn-success mb-3" onclick="openHolidayForm()">+ Add Holiday</button>
+        <table class="table table-bordered table-hover">
+          <thead>
+            <tr>
+              <th>ID</th><th>Year</th><th>Date</th><th>Name</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="holidaysBody"></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* ================= CONFIG ================= */
+const API_URL = "https://script.google.com/macros/s/AKfycbyiala_6HZuindtFIUeg3stZ1TCbcLXIolZXNOcAQGr0wj9J-0fFyggVMLS3GMRqaT62g/exec";
+
+/* ================= API HELPER ================= */
+function api(action,data,cb){ data.action=action;
+  fetch(API_URL,{method:"POST",body:JSON.stringify(data)})
+    .then(r=>r.json())
+    .then(res=>{ cb(res);})
+    .catch(err=>{ Swal.fire("Error","Server not responding","error"); console.error(err); });
+}
+
+/* ================= CACHE ================= */
+let dropdowns = {class:[], section:[], subject:[]};
+let teacherData = {};
+let currentTeacher = null;
+let holidayData = {};
+
+/* ================= INIT ================= */
+function initAdmin(){
+  showLoader("Data loading...");
+  api("adminInit", {}, res => { hideLoader(); console.log(res);
+    if(res.status !== "ok") return;
+    dropdowns = res.dropdowns;
+    teacherData = {};
+    res.teachers.forEach(t => { teacherData[t.tid] = structuredClone(t);});
+
+    holidayData = {};
+    res.holidays.forEach(h => {holidayData[h.id] = structuredClone(h);});
+    renderTeacherTable();
+    renderHolidays();
+  });
+}
+
+initAdmin();
+
+/* ================= TEACHERS ================= */
+function renderTeacherTable(){
+  const body = document.getElementById("teachersBody");
+  body.innerHTML = "";
+
+  Object.values(teacherData).forEach(t => {
+    body.insertAdjacentHTML("beforeend", `
+      <tr>
+        <td>${t.tid}</td>
+        <td>${t.name}</td>
+        <td>${t.password}</td>
+        <td>
+          <button class="btn btn-info btn-sm" onclick="viewAssignments('${t.tid}')">View</button>
+        </td>
+        <td>
+          <button class="btn btn-warning btn-sm" onclick="editTeacher('${t.tid}')">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteTeacher('${t.tid}')">Delete</button>
+        </td>
+      </tr>
+    `);
+  });
+}
+
+
+
+function openTeacherForm(t = null) {
+  assignBox.innerHTML = "";
+  currentTeacher = t ? structuredClone(t) : null;
+  new bootstrap.Tab( document.querySelector('[data-bs-target="#teacherFormTab"]')).show();
+  formTitle.innerText = t ? "Edit Teacher" : "Add Teacher";
+  fTid.value = t ? t.tid : ""; fTid.disabled = !!t;
+  fName.value = t ? t.name : ""; fPwd.value  = t ? t.password : "";
+  if (t && t.assignments.length) { t.assignments.forEach(a => addAssignmentRow(a));
+  } else { addAssignmentRow();}
+}
+
+
+function addAssignmentRow(a={}) {
+  assignBox.insertAdjacentHTML("beforeend", `
+    <div class="assignment-row">
+      <select class="form-select cls">
+        ${dropdowns.class.map(c=>`<option ${a.class===c?"selected":""}>${c}</option>`).join('')}
+      </select>
+      <select class="form-select sec">
+        ${dropdowns.section.map(s=>`<option ${a.section===s?"selected":""}>${s}</option>`).join('')}
+      </select>
+      <select class="form-select sub">
+        ${dropdowns.subject.map(s=>`<option value="${s.value}" ${a.subject?.value===s.value?"selected":""}>${s.text}</option>`).join('')}
+      </select>
+      <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">×</button>
+    </div>
+  `);
+}
+
+
+function saveTeacher(){
+  const tid = fTid.value.trim();
+  const name = fName.value.trim();
+  const password = fPwd.value.trim();
+
+  if(!tid || !name || !password){
+    return Swal.fire("TID, Name & Password required","","warning");
+  }
+
+  const assignments = [...document.querySelectorAll(".assignment-row")].map(r => {
+    const cls = r.querySelector(".cls").value;
+    const sec = r.querySelector(".sec").value;
+    const subSelect = r.querySelector(".sub");
+    return {
+      class: cls,
+      section: sec,
+      subject: {
+        value: subSelect.value,
+        text: subSelect.options[subSelect.selectedIndex].text
+      }
+    };
+  });
+
+  if(!assignments.length){
+    return Swal.fire("At least one subject required","","warning");
+  }
+
+  const teacher = { tid, name, password, assignments };
+
+  // ===== OPTIMISTIC CACHE UPDATE =====
+  teacherData[tid] = structuredClone(teacher);
+  renderTeacherTable();
+
+  // ===== ASYNC SERVER SYNC =====
+  api("adminSaveTeacher", teacher, res => {
+    console.log(res);
+    if(res.status !== "ok"){
+      console.error("Server save failed", res);
+    }
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "success",
+      title: "Teacher saved successfully",
+      showConfirmButton: false,
+      timer: 2000
+    });
+  });
+}
+
+
+function editTeacher(tid){ openTeacherForm(teacherData[tid]); }
+
+function viewAssignments(tid) {
+  const t = teacherData[tid];
+  if(!t.assignments.length) return Swal.fire("No Assignments","","info");
+
+  let html = "<ul>";
+  t.assignments.forEach(a => {
+    const subj = dropdowns.subject.find(s => s.value === a.subject.value);
+    const subjName = subj ? subj.text : a.subject.text;
+    html += `<li>${a.class} - ${a.section} - ${subjName}</li>`;
+  });
+  html += "</ul>";
+
+  Swal.fire({title:"Assignments", html});
+}
+
+function deleteTeacher(tid){
+  Swal.fire({
+    title: "Are you sure?",
+    text: "This teacher will be permanently deleted",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#d33",
+    confirmButtonText: "Yes, delete"
+  }).then(r => {
+    if(!r.isConfirmed) return;
+
+    delete teacherData[tid];
+    renderTeacherTable();
+
+    api("adminDeleteTeacher", { tid }, res => {
+      console.log(res);
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "success",
+        title: "Teacher deleted from database!",
+        showConfirmButton: false,
+        timer: 2000
+      });
+    });
+  });
+}
+
+
+/* ================= HOLIDAYS ================= */
+function renderHolidays(){
+  const body = document.getElementById("holidaysBody");
+  body.innerHTML = "";
+
+  Object.values(holidayData).forEach(h => {
+    body.insertAdjacentHTML("beforeend", `
+      <tr>
+        <td>${h.id}</td><td>${h.year}</td><td>${h.date}</td> <td>${h.holiday_name}</td>
+        <td>
+          <button class="btn btn-warning btn-sm"
+            onclick="editHoliday('${h.id}')">Edit</button>
+          <button class="btn btn-danger btn-sm"
+            onclick="deleteHoliday('${h.id}')">Delete</button>
+        </td>
+      </tr>
+    `);
+  });
+}
+
+function openHolidayForm(h = null){
+  const temp = h ? structuredClone(h) : null;
+  Swal.fire({ title: h ? "Edit Holiday" : "Add Holiday",
+    html: `
+      <input id="hYear" class="swal2-input" placeholder="Year" value="${temp ? temp.year : ""}">
+      <input id="hDate" type="date" class="swal2-input" value="${temp ? temp.date : ""}">
+      <input id="hName" class="swal2-input" placeholder="Name" value="${temp ? temp.holiday_name : ""}">
+    `,
+    showCancelButton: true,
+    preConfirm: () => ({year: hYear.value, date: hDate.value, holiday_name: hName.value})
+  }).then(r => {
+    if(!r.value) return;
+    if(h){
+      holidayData[h.id] = { ...holidayData[h.id], ...r.value };
+      renderHolidays();
+      api("adminUpdateHoliday", { id: h.id, ...r.value }, res => { console.log(res);
+      });
+
+    }else{
+      const tempId = "tmp_" + Date.now();
+      holidayData[tempId] = { id: tempId, ...r.value };
+      renderHolidays();
+
+      api("adminAddHoliday", r.value, res => {
+        console.log(res);
+        if(res.id){
+          // replace temp id with real id
+          holidayData[res.id] = { id: res.id, ...r.value };
+          delete holidayData[tempId];
+          renderHolidays();
+        }
+      });
+    }
+  });
+}
+
+
+
+function editHoliday(id){openHolidayForm(holidayData[id]);}
+
+function deleteHoliday(id){
+  Swal.fire({ title: "Delete holiday?", icon: "warning", showCancelButton: true, confirmButtonText: "Yes, delete"
+  }).then(r => {
+    if(!r.isConfirmed) return;
+    delete holidayData[id];
+    renderHolidays();
+    api("adminDeleteHoliday", { id }, res => {  console.log(res);
+      Swal.fire({ toast: true, position: "top-end", icon: "success", title: "Holiday deleted from database!", showConfirmButton: false, timer: 2000});
+    });
+  });
+}
+
+function showLoader(text="Please wait..."){Swal.fire({title: text, allowOutsideClick: false, didOpen: () => {Swal.showLoading();} });}
+function hideLoader(){Swal.close();}
+
+/* ================= SIDEBAR ================= */
+const sidebar=document.getElementById("sidebar");
+const overlay=document.getElementById("overlay");
+const mainContent=document.getElementById("mainContent");
+const hamburger=document.getElementById("hamburger");
+const sidebarClose=document.getElementById("sidebarClose");
+
+function toggleSidebar(){
+  const isActive=sidebar.classList.toggle("active");
+  if(window.innerWidth>=768) mainContent.classList.toggle("shift",isActive);
+  if(window.innerWidth<768) overlay.classList.toggle("active",isActive);
+  hamburger.style.display=isActive?"none":"inline";
+  sidebarClose.style.display=isActive?"inline":"none";
+}
+
+/* ================= NAVIGATION ================= */
+function goAttendancePage(){location.href="attendance.html";}
+function logoutTeacher(){location.href="index.html";}
+</script>
+
+</body>
+</html>
