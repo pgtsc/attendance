@@ -103,10 +103,10 @@ body {padding:0; margin:0; font-family: Arial, sans-serif;}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 /* ================= CONFIG ================= */
-const API_URL = "https://script.google.com/macros/s/AKfycbyiala_6HZuindtFIUeg3stZ1TCbcLXIolZXNOcAQGr0wj9J-0fFyggVMLS3GMRqaT62g/exec";
-
+const API_URL = "https://script.google.com/macros/s/AKfycbziv5PsAuYxhgGGJxNa5zEpDHGe5XRkkv-Fd_LwWdoQB81IrCLCpUPZEgDYQB2wqMM_/exec";
+const token = sessionStorage.getItem("token");
 /* ================= API HELPER ================= */
-function api(action,data,cb){ data.action=action;
+function api(action,data,cb){ data.action=action; data.token = token;
   fetch(API_URL,{method:"POST",body:JSON.stringify(data)})
     .then(r=>r.json())
     .then(res=>{ cb(res);})
@@ -129,6 +129,7 @@ function initAdmin(){
     res.teachers.forEach(t => { teacherData[t.tid] = structuredClone(t);});
 
     holidayData = {};
+    console.log(res.holidays);
     res.holidays.forEach(h => {holidayData[h.id] = structuredClone(h);});
     renderTeacherTable();
     renderHolidays();
@@ -297,7 +298,7 @@ function renderHolidays(){
   Object.values(holidayData).forEach(h => {
     body.insertAdjacentHTML("beforeend", `
       <tr>
-        <td>${h.id}</td><td>${h.year}</td><td>${h.date}</td> <td>${h.holiday_name}</td>
+        <td>${h.id}</td><td>${h.year}</td><td>${h.date}</td> <td>${h.name}</td>
         <td>
           <button class="btn btn-warning btn-sm"
             onclick="editHoliday('${h.id}')">Edit</button>
@@ -315,10 +316,10 @@ function openHolidayForm(h = null){
     html: `
       <input id="hYear" class="swal2-input" placeholder="Year" value="${temp ? temp.year : ""}">
       <input id="hDate" type="date" class="swal2-input" value="${temp ? temp.date : ""}">
-      <input id="hName" class="swal2-input" placeholder="Name" value="${temp ? temp.holiday_name : ""}">
+      <input id="hName" class="swal2-input" placeholder="Name" value="${temp ? temp.name : ""}">
     `,
     showCancelButton: true,
-    preConfirm: () => ({year: hYear.value, date: hDate.value, holiday_name: hName.value})
+    preConfirm: () => ({year: hYear.value, date: hDate.value, name: hName.value})
   }).then(r => {
     if(!r.value) return;
     if(h){
