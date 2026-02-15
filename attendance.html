@@ -304,6 +304,7 @@ function getHoliday(year, month, day) {
 }
 
 function showMonthlyAttendance() {
+  if(!cls.value || !sec.value || !sub.value){Swal.fire("Select Class, Section & Subject"); return;}
   document.getElementById("atnInfoContainer").style.display = "none";
   document.getElementById("tableContainer").style.display = "none";
   document.getElementById("monthlyContainer").style.display = "block";
@@ -627,3 +628,4 @@ function adminPage(){
 </script>
 </body>
 </html>
+
