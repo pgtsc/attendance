@@ -41,9 +41,6 @@ padding: 0.5rem 1rem; transition:.3s; z-index:1100; box-shadow: rgba(60, 64, 67,
 /* Absent row highlight */
 .table .tr-absent{ --bs-table-bg: rgba(255, 100, 100, 0.3);} 
 .monthly-table th, .monthly-table td { text-align: center; font-size: 12px; padding: 4px;}
-.day-P { background:#47d43d !important; font-weight:bold; }
-.day-A { background:#f7c5c5 !important; font-weight:bold; }
-.day-empty { background:#f6f6f6 !important;}
 .weekend { background:#b8b8b8 !important; }
 .sticky-col {position: sticky; left: 0; background: white; z-index: 2;}
 .holiday {background: #f1c076 !important; font-weight: bold;cursor: help;}
@@ -149,6 +146,7 @@ padding: 0.5rem 1rem; transition:.3s; z-index:1100; box-shadow: rgba(60, 64, 67,
           <th>Last Day</th>
           <th class="d-none d-md-table-cell">Today</th>
           <th>Action</th>
+          <th class="d-none d-md-table-cell">Atn. Rate</th>
         </tr>
       </thead>
       <tbody id="mytbody"></tbody>
@@ -283,6 +281,7 @@ function renderTable(studentsArray){
             <td class="action">
                 <button class="attn-btn ${s.status==="P"?"p":"a"}" onclick="toggleAttendance('${s.roll}')">${s.status==="P"?"P":"A"}</button>
             </td>
+            <td class="d-none d-md-table-cell">${s.rate} %</td>
         </tr>`;
     });
     document.getElementById('totalStu').textContent = studentsArray.length;
@@ -628,4 +627,3 @@ function adminPage(){
 </script>
 </body>
 </html>
-
